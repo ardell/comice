@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+// We use CLImax to process command-line arguments
+require_once 'climax/CLImax.php';
+
+class Comice_Exec extends CLIMax_BaseCommand
+{
+
+    public function run($arguments, CLImaxController $cliController)
+    {
+        throw new Exception("comice exec is not yet complete.");
+    }
+
+    public function getDescription($aliases, $argLinker) {
+        return 'Execute a command scoped to the appropriate pear libraries.';
+    }
+
+}
+
+CLImaxController::create()
+    ->addCommand(new Comice_Exec, array('exec'))
+    ->run($argv, $argc);
+

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<package xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0         http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd" version="2.0">
+  <name>comice</name>
+  <channel>ardell.pearfarm.org</channel>
+  <summary>A port of ruby's bundler for pear/php.</summary>
+  <description>A port of ruby's bundler for pear/php.</description>
+  <lead>
+    <name>Jason Ardell</name>
+    <user>ardell</user>
+    <email>ardell@gmail.com</email>
+    <active>yes</active>
+  </lead>
+  <date>2011-10-14</date>
+  <time>14:19:38</time>
+  <version>
+    <release>0.0.1</release>
+    <api>0.0.1</api>
+  </version>
+  <stability>
+    <release>alpha</release>
+    <api>alpha</api>
+  </stability>
+  <license uri="http://www.opensource.org/licenses/mit-license.html">MIT</license>
+  <notes>Initial release.</notes>
+  <contents>
+    <dir name="/" baseinstalldir="comice">
+      <file name=".gitignore" role="php" md5sum="be81722199ad931863c172cd71d320d4"/>
+      <file name="README.md" role="php" md5sum="36841099344f3314149ae578caa5eff1"/>
+      <file name="comice" role="script" baseinstalldir="/" md5sum="b98bb7820c87489521c4d796b5b83246">
+        <tasks:replace type="pear-config" from="/usr/bin/env php" to="php_bin"/>
+        <tasks:replace type="pear-config" from="@php_bin@" to="php_bin"/>
+        <tasks:replace type="pear-config" from="@bin_dir@" to="bin_dir"/>
+        <tasks:replace type="pear-config" from="@pear_directory@" to="php_dir"/>
+      </file>
+      <file name="package.xml" role="php" md5sum="ce53f8216366c30a8184b9df6c0c6e28"/>
+      <file name="pearfarm.spec" role="php" md5sum="e4cbf4ebe1c64e81671bd4e460c9261f"/>
+    </dir>
+  </contents>
+  <dependencies>
+    <required>
+      <php>
+        <min>5.0.0</min>
+      </php>
+      <pearinstaller>
+        <min>1.4.0</min>
+      </pearinstaller>
+      <package>
+        <name>climax</name>
+        <channel>apinstein.pearfarm.org/climax</channel>
+      </package>
+    </required>
+  </dependencies>
+  <phprelease>
+    <filelist>
+      <install as="comice" name="comice"/>
+    </filelist>
+  </phprelease>
+</package>
