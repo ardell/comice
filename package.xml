@@ -11,7 +11,7 @@
     <active>yes</active>
   </lead>
   <date>2011-10-14</date>
-  <time>14:19:38</time>
+  <time>16:16:41</time>
   <version>
     <release>0.0.1</release>
     <api>0.0.1</api>
@@ -26,13 +26,13 @@
     <dir name="/" baseinstalldir="comice">
       <file name=".gitignore" role="php" md5sum="be81722199ad931863c172cd71d320d4"/>
       <file name="README.md" role="php" md5sum="36841099344f3314149ae578caa5eff1"/>
-      <file name="comice" role="script" baseinstalldir="/" md5sum="b98bb7820c87489521c4d796b5b83246">
+      <file name="comice" role="script" baseinstalldir="/" md5sum="2854c7ea0ac2aac86743bbedbd1ae457">
         <tasks:replace type="pear-config" from="/usr/bin/env php" to="php_bin"/>
         <tasks:replace type="pear-config" from="@php_bin@" to="php_bin"/>
         <tasks:replace type="pear-config" from="@bin_dir@" to="bin_dir"/>
         <tasks:replace type="pear-config" from="@pear_directory@" to="php_dir"/>
       </file>
-      <file name="package.xml" role="php" md5sum="ce53f8216366c30a8184b9df6c0c6e28"/>
+      <file name="package.xml" role="php" md5sum="0c024f3e4d6b2664c914cd824fd4e9b1"/>
       <file name="pearfarm.spec" role="php" md5sum="e4cbf4ebe1c64e81671bd4e460c9261f"/>
     </dir>
   </contents>

@@ -9,11 +9,101 @@ class Comice_Exec extends CLIMax_BaseCommand
 
     public function run($arguments, CLImaxController $cliController)
     {
-        throw new Exception("comice exec is not yet complete.");
+        // Find .pearrc
+        $possiblePearrcLocations = array(
+            '.',
+            'conf',
+            'config',
+        );
+
+        // If we don't find a .pearrc we'll use system pear
+        $pearrcLocation = NULL;
+
+        // Walk up from pwd to find .pearrc in one of the possible locations
+        // If we get to / or we find a .pearrc then stop looking
+        $pwd = getcwd();
+        $pathComponents = array_filter(explode('/', $pwd));
+        while (!empty($pathComponents))
+        {
+            $dir = '/' . implode('/', $pathComponents);
+
+            foreach ($possiblePearrcLocations as $location)
+            {
+                $pathToCheck = "{$dir}/{$location}/.pearrc";
+                if (file_exists($pathToCheck)) $pearrcLocation = realpath($pathToCheck);
+            }
+
+            if ($pearrcLocation) break;
+            array_pop($pathComponents);
+        }
+        if ($pearrcLocation)
+        {
+            print("Using .pearrc at: {$pearrcLocation}\n");
+        } else {
+            print("Warning: could not find a .pearrc, using system pear.\n");
+        }
+
+        // Set $PEARRC environment variable and run the command
+        putenv("PEARRC={$pearrcLocation}");
+
+        // Pull php_bin, bin_dir, php_dir from pear config-get
+        $php_bin  = $bin_dir = $php_dir = NULL;
+        $pearVars = array('php_bin', 'bin_dir', 'php_dir');
+        foreach ($pearVars as $var)
+        {
+            $result = NULL;
+            if ($pearrcLocation)
+            {
+                exec("pear -c {$pearrcLocation} config-get {$var}", $result, $statusCode);
+            } else {
+                exec("pear config-get {$var}", $result, $statusCode);
+            }
+            $$var = $result;
+            if (is_array($result)) $$var = array_shift($result);
+            if ($statusCode !== 0) throw new Exception("Error getting {$var} from pear, got error code {$statusCode}.");
+        }
+
+        // Extract arguments
+        $executable         = array_shift($arguments);
+        $fullExecutablePath = "{$bin_dir}/{$executable}";
+        $arguments          = implode(' ', $arguments);
+
+        // Read the shebang to see whether we're executing a php file
+        $isPhpExecutable = exec("head -1 {$fullExecutablePath} | grep '^#!.*php\$'");
+
+        // Build our command
+        $command = NULL;
+        if ($isPhpExecutable)
+        {
+            // Run the php command with the correct include path
+            $command = "{$php_bin} -d include_path='{$php_dir}' {$fullExecutablePath} {$arguments} 2>&1";
+        } else {
+            // Set up environment variables
+            $environmentVariables = array(
+                'PHP_BIN',          // Canonical. Use this if at all possible.
+                'PHP_PEAR_PHP_BIN', // Pecl
+                'PHP_COMMAND',      // Phing
+            );
+            foreach ($environmentVariables as $environmentVar)
+            {
+                putenv("{$environmentVar}={$php_bin} -d include_path='{$php_dir}'");
+            }
+
+            // Just execute the command and pray that an
+            // environment variable set up the include path
+            // correctly
+            $command = "{$fullExecutablePath} {$arguments} 2>&1";
+        }
+
+        // Run the command in the appropriate context
+        passthru($command, $returnCode);
+
+        // Return the return code of the `$phpBin -d ...` command from above
+        return $returnCode;
     }
 
     public function getDescription($aliases, $argLinker) {
-        return 'Execute a command scoped to the appropriate pear libraries.';
+        return 'Execute a command scoped to the appropriate pear context.';
     }
 
 }
