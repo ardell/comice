@@ -44,6 +44,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         }
 
         // Set $PEARRC environment variable and run the command
+        // NOTE: I *swear* we saw that PEARRC did something useful but I can no longer find docs for it.
         putenv("PEARRC={$pearrcLocation}");
 
         // Pull php_bin, bin_dir, php_dir from pear config-get
@@ -69,6 +70,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         $arguments          = implode(' ', $arguments);
 
         // Read the shebang to see whether we're executing a php file
+        if (!file_exists($fullExecutablePath)) throw new CLImaxCommand_ArugumentException("There is no pear-installed executable at {$fullExecutablePath}.");
         $isPhpExecutable = exec("head -1 {$fullExecutablePath} | grep '^#!.*php\$'");
 
         // Build our command
