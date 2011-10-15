@@ -195,8 +195,60 @@ class Comice_Pear extends CLIMax_BaseCommand
         return 'Manage a PEAR sandbox without having to juggle paths or conf files.';
     }
 }
+class Comice_PearInit extends CLIMax_BaseCommand
+{
+    public function run($arguments, CLImaxController $cliController)
+    {
+        $pearconfig = new Comice_Pear_Config;
+
+        @list($externalsDir, $pearrc) = $arguments;
+        if (!$pearrc)
+        {
+            $pearrc = getcwd() . "/.pearrc";
+        }
+        if (!$externalsDir)
+        {
+            $externalsDir = getcwd() . "/externals";
+        }
+
+        if (!file_exists($externalsDir))
+        {
+            $ok = mkdir($externalsDir, 0755, true);
+            if ($ok === false) throw new Exception("Couldn't initialize {$externalsDir}");
+        }
+
+        // Extract arguments
+        array_unshift($arguments, $pearconfig->getPearPearrcArg());
+
+        // Set up environment variables
+        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDir()}");
+        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBin()}");
+
+        $command = "{$pearconfig->getBinDir()}/pear {$pearconfig->getPearPearrcArg()} config-create {$externalsDir} {$pearrc} 2>&1";
+        passthru($command, $returnCode);
+        if ($returnCode !== 0) throw new Exception("Error running {$command}");
+
+        $bootstrapCommands = array(
+            "install -o PEAR",
+            "upgrade PEAR",
+            "config-set auto_discover 1"
+            );
+        foreach ($bootstrapCommands as $cmd) {
+            $command = "{$pearconfig->getBinDir()}/pear -c {$pearrc} {$cmd} 2>&1";
+            passthru($command, $returnCode);
+            if ($returnCode !== 0) throw new Exception("Error running {$command}");
+        }
+
+        return 0;
+    }
+
+    public function getDescription($aliases, $argLinker) {
+        return 'Initialize a PEAR sandbox: comice pear-init [externals-dir location] [pearrc location]';
+    }
+}
 CLImaxController::create()
     ->addCommand(new Comice_Exec, array('exec'))
     ->addCommand(new Comice_Pear, array('pear'))
+    ->addCommand(new Comice_PearInit, array('pear-init'))
     ->run($argv, $argc);
 
