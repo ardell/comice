@@ -1,14 +1,61 @@
 #!/usr/bin/env php
 <?php
 
-// We use CLImax to process command-line arguments
+// vim: set expandtab tabstop=4 shiftwidth=4 syntax=php:
+
 require_once 'climax/CLImax.php';
 
-class Comice_Exec extends CLIMax_BaseCommand
+class Comice_Pear_Config
 {
+    /**
+     * @var string Path to the php executable
+     */
+    protected $php_bin;
+    /**
+     * @var string Path to the pear bin directory
+     */
+    protected $bin_dir;
+    /**
+     * @var string Path to the pear-managed php code dir
+     */
+    protected $php_dir;
+    /**
+     * @var string The path to the pearrc
+     */
+    protected $pearrc;
 
-    public function run($arguments, CLImaxController $cliController)
+    public function __construct()
     {
+        $this->pearrc = $this->locatePearrc(getcwd());
+
+        $this->php_bin = $this->pearConfigGet('php_bin');
+        $this->bin_dir = $this->pearConfigGet('bin_dir');
+        $this->php_dir = $this->pearConfigGet('php_dir');
+    }
+
+    public function getPearrc()
+    {
+        return $this->pearrc;
+    }
+
+    public function getPhpBin()
+    {
+        return $this->php_bin;
+    }
+
+    public function getBinDir()
+    {
+        return $this->bin_dir;
+    }
+
+    public function getPhpDir()
+    {
+        return $this->php_dir;
+    }
+
+    protected function locatePearrc($fromDir)
+    {
+        if (!is_dir($fromDir)) throw new Exception("locatePearrc({$fromDir}) is not a directory.");
         // Find .pearrc
         $possiblePearrcLocations = array(
             '.',
@@ -19,21 +66,25 @@ class Comice_Exec extends CLIMax_BaseCommand
         // If we don't find a .pearrc we'll use system pear
         $pearrcLocation = NULL;
 
-        // Walk up from pwd to find .pearrc in one of the possible locations
+        // Walk up from passed dir to find .pearrc in one of the possible locations
         // If we get to / or we find a .pearrc then stop looking
-        $pwd = getcwd();
-        $pathComponents = array_filter(explode('/', $pwd));
-        while (!empty($pathComponents))
+        $pathComponents = array_filter(explode('/', $fromDir));
+        $found = false;
+        while (!empty($pathComponents) and !$found)
         {
             $dir = '/' . implode('/', $pathComponents);
 
             foreach ($possiblePearrcLocations as $location)
             {
                 $pathToCheck = "{$dir}/{$location}/.pearrc";
-                if (file_exists($pathToCheck)) $pearrcLocation = realpath($pathToCheck);
+                if (file_exists($pathToCheck))
+                {
+                    $pearrcLocation = realpath($pathToCheck);
+                    $found = true;
+                    break;
+                }
             }
 
-            if ($pearrcLocation) break;
             array_pop($pathComponents);
         }
         if ($pearrcLocation)
@@ -43,30 +94,39 @@ class Comice_Exec extends CLIMax_BaseCommand
             print("Warning: could not find a .pearrc, using system pear.\n");
         }
 
+        return $pearrcLocation;
+    }
+
+    public function pearPearrcArg()
+    {
+        if (!$this->pearrc) return NULL;
+        return " -c {$this->pearrc} ";
+    }
+
+    public function pearConfigGet($config)
+    {
+        $cmd = "pear {$this->pearPearrcArg()} config-get {$config}";
+        exec($cmd, $output, $statusCode);
+        if ($statusCode !== 0) throw new Exception("Error getting {$config} from pear, got error code {$statusCode}.");
+        if (!is_array($output) or count($output) !== 1) throw new Exception("Unexpected output from {$cmd}\n" . join("\n", $output));
+
+        return $output[0];
+    }
+}
+
+class Comice_Exec extends CLIMax_BaseCommand
+{
+    public function run($arguments, CLImaxController $cliController)
+    {
+        $pearconfig = new Comice_Pear_Config;
+
         // Set $PEARRC environment variable and run the command
         // NOTE: I *swear* we saw that PEARRC did something useful but I can no longer find docs for it.
-        putenv("PEARRC={$pearrcLocation}");
-
-        // Pull php_bin, bin_dir, php_dir from pear config-get
-        $php_bin  = $bin_dir = $php_dir = NULL;
-        $pearVars = array('php_bin', 'bin_dir', 'php_dir');
-        foreach ($pearVars as $var)
-        {
-            $result = NULL;
-            if ($pearrcLocation)
-            {
-                exec("pear -c {$pearrcLocation} config-get {$var}", $result, $statusCode);
-            } else {
-                exec("pear config-get {$var}", $result, $statusCode);
-            }
-            $$var = $result;
-            if (is_array($result)) $$var = array_shift($result);
-            if ($statusCode !== 0) throw new Exception("Error getting {$var} from pear, got error code {$statusCode}.");
-        }
+        //putenv("PEARRC={$pearconfig->getPearrc()}");
 
         // Extract arguments
         $executable         = array_shift($arguments);
-        $fullExecutablePath = "{$bin_dir}/{$executable}";
+        $fullExecutablePath = "{$pearconfig->getBinDir()}/{$executable}";
         $arguments          = implode(' ', $arguments);
 
         // Read the shebang to see whether we're executing a php file
@@ -78,7 +138,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         if ($isPhpExecutable)
         {
             // Run the php command with the correct include path
-            $command = "{$php_bin} -d include_path='{$php_dir}' {$fullExecutablePath} {$arguments} 2>&1";
+            $command = "{$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}' {$fullExecutablePath} {$arguments} 2>&1";
         } else {
             // Set up environment variables
             $environmentVariables = array(
@@ -88,7 +148,7 @@ class Comice_Exec extends CLIMax_BaseCommand
             );
             foreach ($environmentVariables as $environmentVar)
             {
-                putenv("{$environmentVar}={$php_bin} -d include_path='{$php_dir}'");
+                putenv("{$environmentVar}={$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}'");
             }
 
             // Just execute the command and pray that an
@@ -107,7 +167,6 @@ class Comice_Exec extends CLIMax_BaseCommand
     public function getDescription($aliases, $argLinker) {
         return 'Execute a command scoped to the appropriate pear context.';
     }
-
 }
 
 CLImaxController::create()
