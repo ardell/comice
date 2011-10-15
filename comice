@@ -256,4 +256,3 @@ CLImaxController::create()
     ->addCommand(new Comice_Pear, array('pear'))
     ->addCommand(new Comice_PearInit, array('pear-init'))
     ->run($argv, $argc);
-
