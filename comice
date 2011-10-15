@@ -128,6 +128,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         $executable         = array_shift($arguments);
         $fullExecutablePath = "{$pearconfig->getBinDir()}/{$executable}";
         $arguments          = implode(' ', $arguments);
+        if ($executable === NULL) throw new Exception("comice exec requires a command. If you're trying to 'comice exec pear ...', simply run 'comice pear ...'");
 
         // Read the shebang to see whether we're executing a php file
         if (!file_exists($fullExecutablePath)) throw new CLImaxCommand_ArugumentException("There is no pear-installed executable at {$fullExecutablePath}.");
@@ -246,6 +247,7 @@ class Comice_PearInit extends CLIMax_BaseCommand
         return 'Initialize a PEAR sandbox: comice pear-init [externals-dir location] [pearrc location]';
     }
 }
+
 CLImaxController::create()
     ->addCommand(new Comice_Exec, array('exec'))
     ->addCommand(new Comice_Pear, array('pear'))
