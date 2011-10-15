@@ -7,7 +7,7 @@ $spec = Pearfarm_PackageSpec::create(array(Pearfarm_PackageSpec::OPT_BASEDIR => 
              ->setDescription("A port of ruby's bundler for pear/php.")
              ->setReleaseVersion('0.0.4')
              ->setReleaseStability('alpha')
-             ->setApiVersion('0.0.1')
+             ->setApiVersion('0.0.2')
              ->setApiStability('alpha')
              ->setLicense(Pearfarm_PackageSpec::LICENSE_MIT)
              ->setNotes('Initial release.')

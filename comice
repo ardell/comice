@@ -56,6 +56,7 @@ class Comice_Pear_Config
     protected function locatePearrc($fromDir)
     {
         if (!is_dir($fromDir)) throw new Exception("locatePearrc({$fromDir}) is not a directory.");
+
         // Find .pearrc
         $possiblePearrcLocations = array(
             '.',
@@ -87,12 +88,6 @@ class Comice_Pear_Config
 
             array_pop($pathComponents);
         }
-        if ($pearrcLocation)
-        {
-            print("Using .pearrc at: {$pearrcLocation}\n");
-        } else {
-            print("Warning: could not find a .pearrc, using system pear.\n");
-        }
 
         return $pearrcLocation;
     }
@@ -119,10 +114,18 @@ class Comice_Exec extends CLIMax_BaseCommand
     public function run($arguments, CLImaxController $cliController)
     {
         $pearconfig = new Comice_Pear_Config;
+        $pearrc     = $pearconfig->getPearrc();
+        $quiet      = $cliController->getEnvironment('quiet');
+        if ($pearrc)
+        {
+            if (!$quiet) print("Using .pearrc at: {$pearrc}\n");
+        } else {
+            if (!$quiet) print("Warning: could not find a .pearrc, using system pear.\n");
+        }
 
         // Set $PEARRC environment variable and run the command
         // NOTE: I *swear* we saw that PEARRC did something useful but I can no longer find docs for it.
-        //putenv("PEARRC={$pearconfig->getPearrc()}");
+        //putenv("PEARRC={$pearrc}");
 
         // Extract arguments
         $executable         = array_shift($arguments);
@@ -140,9 +143,9 @@ class Comice_Exec extends CLIMax_BaseCommand
         {
             // Run the php command with the correct include path
             $command = "{$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}' {$fullExecutablePath} {$arguments} 2>&1";
-        } else if ($executable == 'pear' && $pearrcLocation) {
+        } else if ($executable == 'pear' && $pearrc) {
             // Substitute in our pearrc
-            $command = "{$fullExecutablePath} -c {$pearconfig->getPearrc()} {$arguments} 2>&1";
+            $command = "{$fullExecutablePath} -c {$pearrc} {$arguments} 2>&1";
         } else {
             // Set up environment variables
             $environmentVariables = array(
@@ -162,7 +165,14 @@ class Comice_Exec extends CLIMax_BaseCommand
         }
 
         // Run the command in the appropriate context
-        passthru($command, $returnCode);
+        if ($quiet)
+        {
+            // Exec buffers output to $output (instead of STDOUT and STDERR)
+            exec($command, $output, $returnCode);
+        } else {
+            // Passthru still sends output to STDOUT and STDERR
+            passthru($command, $returnCode);
+        }
 
         // Return the return code of the `$phpBin -d ...` command from above
         return $returnCode;
@@ -251,8 +261,95 @@ class Comice_PearInit extends CLIMax_BaseCommand
     }
 }
 
+class Comice_Install extends CLIMax_BaseCommand
+{
+
+    public function run($arguments, CLImaxController $cliController)
+    {
+        // Find Pearfile by walking up cwd
+        $pearfilePath = Comice::findFileByWalkingUpDirectoryTree('Pearfile');
+
+        // php-require Pearfile so it gets executed
+        require $pearfilePath;
+
+        return 0;
+    }
+
+}
+
+class Comice
+{
+
+    public static function findFileByWalkingUpDirectoryTree($filename, $possibleLocations = array('.'))
+    {
+        $fileLocation   = NULL;
+        $pwd            = getcwd();
+        $pathComponents = array_filter(explode('/', $pwd));
+
+        while (!empty($pathComponents))
+        {
+            $dir = '/' . implode('/', $pathComponents);
+
+            foreach ($possibleLocations as $location)
+            {
+                $pathToCheck = "{$dir}/{$location}/{$filename}";
+                if (file_exists($pathToCheck)) $fileLocation = realpath($pathToCheck);
+            }
+
+            if ($fileLocation) break;
+            array_pop($pathComponents);
+        }
+
+        return $fileLocation;
+    }
+
+    public static function install($packages)
+    {
+        foreach ($packages as $package)
+        {
+            // Derive package name
+            $packageName = self::_getPackageName($package);
+
+            // Check whether package is installed
+            passthru("comice -q pear list {$packageName}", $result);
+            $installed = $result == 0;
+            if ($installed)
+            {
+                print("Using {$packageName}\n");
+                continue;
+            }
+
+            // Install it if it is not already installed
+            print("Installing {$packageName}\n");
+            $package = new Comice_Exec();
+            $package->run(
+                array('pear', 'install', $packageName, '2>&1'),
+                new CLImaxController
+            );
+            if ($result !== 0) throw new Exception("Error installing {$packageName}");
+        }
+    }
+
+    private static function _getPackageName($package)
+    {
+        if (!is_array($package)) return $package;
+        if (!isset($package['package'])) throw new Exception("Please specificy a package name: " . print_r($package, true));
+        if (isset($package['channel']) && isset($package['version'])) return "{$package['channel']}/{$package['package']}-{$package['version']}";
+        if (isset($package['channel'])) return "{$package['channel']}/{$package['package']}";
+        if (isset($package['version'])) return "{$package['package']}-{$package['version']}";
+        return $package['package'];
+    }
+
+}
+
 CLImaxController::create()
     ->addCommand(new Comice_Exec, array('exec'))
     ->addCommand(new Comice_Pear, array('pear'))
     ->addCommand(new Comice_PearInit, array('pear-init'))
+    ->addCommand(new Comice_Install, array('install'))
+    ->addEnvironmentFlagSetsValue(
+        'quiet',                            // Argument name
+        true,                               // Value if flag is used
+        array('-q', '--quiet')              // Aliases
+    )
     ->run($argv, $argc);
