@@ -140,6 +140,9 @@ class Comice_Exec extends CLIMax_BaseCommand
         {
             // Run the php command with the correct include path
             $command = "{$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}' {$fullExecutablePath} {$arguments} 2>&1";
+        } else if ($executable == 'pear' && $pearrcLocation) {
+            // Substitute in our pearrc
+            $command = "{$fullExecutablePath} -c {$pearconfig->getPearrc()} {$arguments} 2>&1";
         } else {
             // Set up environment variables
             $environmentVariables = array(
