@@ -97,7 +97,7 @@ class Comice_Pear_Config
         return $pearrcLocation;
     }
 
-    public function pearPearrcArg()
+    public function getPearPearrcArg()
     {
         if (!$this->pearrc) return NULL;
         return " -c {$this->pearrc} ";
@@ -105,7 +105,7 @@ class Comice_Pear_Config
 
     public function pearConfigGet($config)
     {
-        $cmd = "pear {$this->pearPearrcArg()} config-get {$config}";
+        $cmd = "pear {$this->getPearPearrcArg()} config-get {$config}";
         exec($cmd, $output, $statusCode);
         if ($statusCode !== 0) throw new Exception("Error getting {$config} from pear, got error code {$statusCode}.");
         if (!is_array($output) or count($output) !== 1) throw new Exception("Unexpected output from {$cmd}\n" . join("\n", $output));
@@ -169,7 +169,34 @@ class Comice_Exec extends CLIMax_BaseCommand
     }
 }
 
+class Comice_Pear extends CLIMax_BaseCommand
+{
+    public function run($arguments, CLImaxController $cliController)
+    {
+        $pearconfig = new Comice_Pear_Config;
+
+        // Extract arguments
+        $fullExecutablePath = "{$pearconfig->getBinDir()}/pear";
+        array_unshift($arguments, $pearconfig->getPearPearrcArg());
+        $arguments = implode(' ', $arguments);
+
+        // Set up environment variables
+        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDir()}");
+        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBin()}");
+
+        $command = "{$fullExecutablePath} {$arguments} 2>&1";
+        passthru($command, $returnCode);
+
+        // Return the return code of the `$phpBin -d ...` command from above
+        return $returnCode;
+    }
+
+    public function getDescription($aliases, $argLinker) {
+        return 'Manage a PEAR sandbox without having to juggle paths or conf files.';
+    }
+}
 CLImaxController::create()
     ->addCommand(new Comice_Exec, array('exec'))
+    ->addCommand(new Comice_Pear, array('pear'))
     ->run($argv, $argc);
 
