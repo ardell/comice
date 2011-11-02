@@ -5,7 +5,7 @@ $spec = Pearfarm_PackageSpec::create(array(Pearfarm_PackageSpec::OPT_BASEDIR => 
              ->setChannel('pearfarm.pearfarm.org')
              ->setSummary("A port of ruby's bundler for pear/php.")
              ->setDescription("A port of ruby's bundler for pear/php.")
-             ->setReleaseVersion('0.0.4')
+             ->setReleaseVersion('0.0.5')
              ->setReleaseStability('alpha')
              ->setApiVersion('0.0.1')
              ->setApiStability('alpha')
