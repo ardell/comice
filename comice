@@ -53,6 +53,26 @@ class Comice_Pear_Config
         return $this->php_dir;
     }
 
+    public function getPearrcEscaped()
+    {
+        return str_replace(' ', '\\ ', $this->getPearrc());
+    }
+
+    public function getPhpBinEscaped()
+    {
+        return str_replace(' ', '\\ ', $this->getPhpBin());
+    }
+
+    public function getBinDirEscaped()
+    {
+        return str_replace(' ', '\\ ', $this->getBinDir());
+    }
+
+    public function getPhpDirEscaped()
+    {
+        return str_replace(' ', '\\ ', $this->getPhpDir());
+    }
+
     protected function locatePearrc($fromDir)
     {
         if (!is_dir($fromDir)) throw new Exception("locatePearrc({$fromDir}) is not a directory.");
@@ -95,7 +115,7 @@ class Comice_Pear_Config
     public function getPearPearrcArg()
     {
         if (!$this->pearrc) return NULL;
-        return " -c {$this->pearrc} ";
+        return " -c {$this->getPearrcEscaped()} ";
     }
 
     public function pearConfigGet($config)
@@ -114,7 +134,7 @@ class Comice_Exec extends CLIMax_BaseCommand
     public function run($arguments, CLImaxController $cliController)
     {
         $pearconfig = new Comice_Pear_Config;
-        $pearrc     = $pearconfig->getPearrc();
+        $pearrc     = $pearconfig->getPearrcEscaped();
         $quiet      = $cliController->getEnvironment('quiet');
         if ($pearrc)
         {
@@ -129,7 +149,7 @@ class Comice_Exec extends CLIMax_BaseCommand
 
         // Extract arguments
         $executable         = array_shift($arguments);
-        $fullExecutablePath = "{$pearconfig->getBinDir()}/{$executable}";
+        $fullExecutablePath = "{$pearconfig->getBinDirEscaped()}/{$executable}";
         $arguments          = implode(' ', $arguments);
         if ($executable === NULL) throw new Exception("comice exec requires a command. If you're trying to 'comice exec pear ...', simply run 'comice pear ...'");
 
@@ -142,7 +162,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         if ($isPhpExecutable)
         {
             // Run the php command with the correct include path
-            $command = "{$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}' {$fullExecutablePath} {$arguments} 2>&1";
+            $command = "{$pearconfig->getPhpBinEscaped()} -d include_path={$pearconfig->getPhpDirEscaped()} {$fullExecutablePath} {$arguments} 2>&1";
         } else if ($executable == 'pear' && $pearrc) {
             // Substitute in our pearrc
             $command = "{$fullExecutablePath} -c {$pearrc} {$arguments} 2>&1";
@@ -155,7 +175,7 @@ class Comice_Exec extends CLIMax_BaseCommand
             );
             foreach ($environmentVariables as $environmentVar)
             {
-                putenv("{$environmentVar}={$pearconfig->getPhpBin()} -d include_path='{$pearconfig->getPhpDir()}'");
+                putenv("{$environmentVar}={$pearconfig->getPhpBinEscaped()} -d include_path={$pearconfig->getPhpDirEscaped()}");
             }
 
             // Just execute the command and pray that an
@@ -190,13 +210,13 @@ class Comice_Pear extends CLIMax_BaseCommand
         $pearconfig = new Comice_Pear_Config;
 
         // Extract arguments
-        $fullExecutablePath = "{$pearconfig->getBinDir()}/pear";
+        $fullExecutablePath = "{$pearconfig->getBinDirEscaped()}/pear";
         array_unshift($arguments, $pearconfig->getPearPearrcArg());
         $arguments = implode(' ', $arguments);
 
         // Set up environment variables
-        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDir()}");
-        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBin()}");
+        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDirEscaped()}");
+        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBinEscaped()}");
 
         $command = "{$fullExecutablePath} {$arguments} 2>&1";
         passthru($command, $returnCode);
@@ -224,6 +244,8 @@ class Comice_PearInit extends CLIMax_BaseCommand
         {
             $externalsDir = getcwd() . "/externals";
         }
+        $pearrc = str_replace(' ', '\\ ', $pearrc);
+        $externalsDir = str_replace(' ', '\\ ', $externalsDir);
 
         if (!file_exists($externalsDir))
         {
@@ -235,10 +257,10 @@ class Comice_PearInit extends CLIMax_BaseCommand
         array_unshift($arguments, $pearconfig->getPearPearrcArg());
 
         // Set up environment variables
-        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDir()}");
-        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBin()}");
+        putenv("PHP_PEAR_INSTALL_DIR={$pearconfig->getPhpDirEscaped()}");
+        putenv("PHP_PEAR_PHP_BIN={$pearconfig->getPhpBinEscaped()}");
 
-        $command = "{$pearconfig->getBinDir()}/pear {$pearconfig->getPearPearrcArg()} config-create {$externalsDir} {$pearrc} 2>&1";
+        $command = "{$pearconfig->getBinDirEscaped()}/pear {$pearconfig->getPearPearrcArg()} config-create {$externalsDir} {$pearrc} 2>&1";
         passthru($command, $returnCode);
         if ($returnCode !== 0) throw new Exception("Error running {$command}");
 
@@ -248,7 +270,7 @@ class Comice_PearInit extends CLIMax_BaseCommand
             "config-set auto_discover 1"
             );
         foreach ($bootstrapCommands as $cmd) {
-            $command = "{$pearconfig->getBinDir()}/pear -c {$pearrc} {$cmd} 2>&1";
+            $command = "{$pearconfig->getBinDirEscaped()}/pear -c {$pearrc} {$cmd} 2>&1";
             passthru($command, $returnCode);
             if ($returnCode !== 0) throw new Exception("Error running {$command}");
         }
