@@ -147,7 +147,7 @@ class Comice_Exec extends CLIMax_BaseCommand
         // Extract arguments
         $executable         = array_shift($arguments);
         $fullExecutablePath = "{$pearconfig->getBinDirEscaped()}/{$executable}";
-        $arguments          = implode(' ', $arguments);
+        $arguments          = implode(' ', array_map('escapeshellarg', $arguments));
         if ($executable === NULL) throw new Exception("comice exec requires a command. If you're trying to 'comice exec pear ...', simply run 'comice pear ...'");
 
         // Read the shebang to see whether we're executing a php file
