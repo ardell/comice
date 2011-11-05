@@ -322,7 +322,7 @@ class Comice
             // Install it if it is not already installed
             print("Installing {$packageName}\n");
             $package = new Comice_Exec();
-            $package->run(
+            $result = $package->run(
                 array('pear', 'install', $packageName, '2>&1'),
                 new CLImaxController
             );
